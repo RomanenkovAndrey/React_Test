@@ -63,7 +63,7 @@ var App = React.createClass({
   render: function() {
     return (
       <div className='app'>
-        Всем привет, я компонент App! Я умею отображать новости.
+       <h3> Новости </h3>
         <News data={my_news} />
       </div>
     );
