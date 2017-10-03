@@ -3,24 +3,27 @@ import ReactDOM from 'react-dom'
 import { render } from 'react-dom'
 
 import './css/style.css';
+import './EventEmitter.js';
 
 var my_news = [
   {
-    author: 'Саша',
-    text: 'Новость 1',
-    bigText: 'Большой, очень большой, огромный текст, который надо скрыть'
+    author: 'Саша Печкин',
+    text: 'В четчерг, четвертого числа...',
+    bigText: 'в четыре с четвертью часа четыре чёрненьких чумазеньких чертёнка чертили чёрными чернилами чертёж.'
   },
   {
-    author: 'Женя',
-    text: 'Новость 2',
-    bigText: 'Большой, очень большой, огромный текст, который надо скрыть'
+    author: 'Просто Вася',
+    text: 'Считаю, что $ должен стоить 35 рублей!',
+    bigText: 'А евро 42!'
   },
   {
     author: 'Гость',
-    text: 'Новость 3',
-    bigText: 'Большой, очень большой, огромный текст, который надо скрыть'
+    text: 'Бесплатно. Скачать. Лучший сайт - http://localhost:3000',
+    bigText: 'На самом деле платно, просто нужно прочитать очень длинное лицензионное соглашение'
   }
 ];
+
+window.ee = new EventEmitter();
 
 var Article = React.createClass({
   propTypes: {
@@ -95,9 +98,8 @@ var News = React.createClass({
   }
 });
 
-// --- добавили form ---
 var Add = React.createClass({
-  getInitialState: function() { //устанавливаем начальное состояние (state)
+  getInitialState: function() {
     return {
       agreeNotChecked: true,
       authorIsEmpty: true,
@@ -109,25 +111,30 @@ var Add = React.createClass({
   },
   onBtnClickHandler: function(e) {
     e.preventDefault();
+    var textEl = ReactDOM.findDOMNode(this.refs.text);
+
     var author = ReactDOM.findDOMNode(this.refs.author).value;
-    var text = ReactDOM.findDOMNode(this.refs.text).value;
-    alert(author + '\n' + text);
+    var text = textEl.value;
+
+    var item = [{
+      author: author,
+      text: text,
+      bigText: '...'
+    }];
+
+    window.ee.emit('News.add', item);
+
+    textEl.value = '';
+    this.setState({textIsEmpty: true});
   },
   onCheckRuleClick: function(e) {
-    this.setState({agreeNotChecked: !this.state.agreeNotChecked}); //устанавливаем значение в state
+    this.setState({agreeNotChecked: !this.state.agreeNotChecked});
   },
-  onAuthorChange: function(e) {
+  onFieldChange: function(fieldName, e) {
     if (e.target.value.trim().length > 0) {
-      this.setState({authorIsEmpty: false})
+      this.setState({[''+fieldName]:false})
     } else {
-      this.setState({authorIsEmpty: true})
-    }
-  },
-  onTextChange: function(e) {
-    if (e.target.value.trim().length > 0) {
-      this.setState({textIsEmpty: false})
-    } else {
-      this.setState({textIsEmpty: true})
+      this.setState({[''+fieldName]:true})
     }
   },
   render: function() {
@@ -139,13 +146,13 @@ var Add = React.createClass({
         <input
           type='text'
           className='add__author'
-          onChange={this.onAuthorChange}
+          onChange={this.onFieldChange.bind(this, 'authorIsEmpty')}
           placeholder='Ваше имя'
           ref='author'
         />
         <textarea
           className='add__text'
-          onChange={this.onTextChange}
+          onChange={this.onFieldChange.bind(this, 'textIsEmpty')}
           placeholder='Текст новости'
           ref='text'
         ></textarea>
@@ -159,7 +166,7 @@ var Add = React.createClass({
           ref='alert_button'
           disabled={agreeNotChecked || authorIsEmpty || textIsEmpty}
           >
-          Показать alert
+          Опубликовать новость
         </button>
       </form>
     );
@@ -167,12 +174,28 @@ var Add = React.createClass({
 });
 
 var App = React.createClass({
+  getInitialState: function() {
+    return {
+      news: my_news
+    };
+  },
+  componentDidMount: function() {
+    var self = this;
+    window.ee.addListener('News.add', function(item) {
+      var nextNews = item.concat(self.state.news);
+      self.setState({news: nextNews});
+    });
+  },
+  componentWillUnmount: function() {
+    window.ee.removeListener('News.add');
+  },
   render: function() {
+    console.log('render');
     return (
       <div className='app'>
+        <Add />
         <h3>Новости</h3>
-        <Add /> {/* добавили вывод компонента */}
-        <News data={my_news} />
+        <News data={this.state.news} />
       </div>
     );
   }
